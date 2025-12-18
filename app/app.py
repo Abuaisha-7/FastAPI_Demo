@@ -35,6 +35,7 @@ async def upload_file(
     temp_file_path = None
 
     try:
+        # 1. Create and write the temp file
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as temp_file:
             temp_file_path = temp_file.name
             shutil.copyfileobj(file.file, temp_file)
@@ -92,6 +93,25 @@ async def get_feed(session: AsyncSession = Depends(get_async_session)):
 
     return {"posts": posts_data}
 
+
+@app.delete("/posts/{post_id}")
+async def delete_post(post_id: str , session: AsyncSession = Depends(get_async_session)):
+    try:
+        post_uuid = uuid.UUID(post_id) #converting the str post_id
+
+        result = await session.execute(select(Post).where(Post.id == post_uuid))
+        post = result.scalars().first()
+
+        if not post:
+            raise HTTPException(status_code=404, detail="post not found")
+        
+        await session.delete(post)
+        await session.commit()
+
+        return {"success": True, "message": "post deleted successfully"}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 
